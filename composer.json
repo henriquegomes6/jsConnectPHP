@@ -1,7 +1,6 @@
 {
     "name": "henriquegomes6/jsconnet",
     "type": "library",
-    "minimum-stability": "stable",
     "description": "",
     "require": {
         "php": ">=7.2"
