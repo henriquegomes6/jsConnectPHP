@@ -5,13 +5,23 @@
  * @license GNU GPLv2 http://www.opensource.org/licenses/gpl-2.0.php
  */
 
-namespace JsConnect\Tests;
+namespace HenriqueGomes6;
+
+use PHPUnit\Framework\TestCase;
 
 /**
  * Unit tests signJsConnect
  */
-class SignJsConnectTest extends \PHPUnit_Framework_TestCase {
+class SignJsConnectTest extends TestCase
+{
+    /** @var JsConnect */
+    private $jsConnect;
+    public function setUp(): void
+    {
+        parent::setUp();
 
+        $this->jsConnect = new JsConnect;
+    }
     /**
      * @param $data
      * @param $clientID
@@ -22,22 +32,23 @@ class SignJsConnectTest extends \PHPUnit_Framework_TestCase {
      *
      * @dataProvider provideSignJsConnectTests
      */
-    public function testSignJsConnect($data, $clientID, $secret, $hashType, $returnData, $expectedResult) {
-        $this->assertEquals(signJsConnect($data, $clientID, $secret, $hashType, $returnData), $expectedResult);
+    public function testSignJsConnect($data, $clientID, $secret, $hashType, $returnData, $expectedResult)
+    {
+        $this->assertEquals($this->jsConnect->signJsConnect($data, $clientID, $secret, $hashType, $returnData), $expectedResult);
     }
-
 
     /**
      * Provide signature to sign
      *
      * @return array Returns a test array.
      */
-    public function provideSignJsConnectTests() {
+    public function provideSignJsConnectTests()
+    {
         return [
-            'default' => [
+            'default'           => [
                 [
-                    'name' => 'John PHP',
-                    'email' => 'john.php@example.com',
+                    'name'      => 'John PHP',
+                    'email'     => 'john.php@example.com',
                     'unique_id' => '123',
                 ],
                 'clientID',
@@ -46,11 +57,11 @@ class SignJsConnectTest extends \PHPUnit_Framework_TestCase {
                 false,
                 '71528bfbb99aba97734f79beab6d1eca1416e05a0587e9ab55b99095753f74b6',
             ],
-            'unordered' => [
+            'unordered'         => [
                 [
                     'unique_id' => '123',
-                    'email' => 'john.php@example.com',
-                    'name' => 'John PHP',
+                    'email'     => 'john.php@example.com',
+                    'name'      => 'John PHP',
                 ],
                 'clientID',
                 'secret',
@@ -58,10 +69,10 @@ class SignJsConnectTest extends \PHPUnit_Framework_TestCase {
                 false,
                 '71528bfbb99aba97734f79beab6d1eca1416e05a0587e9ab55b99095753f74b6',
             ],
-            'incorrectKeyCase' => [
+            'incorrectKeyCase'  => [
                 [
-                    'Name' => 'John PHP',
-                    'eMail' => 'john.php@example.com',
+                    'Name'      => 'John PHP',
+                    'eMail'     => 'john.php@example.com',
                     'UNIQUE_id' => '123',
                 ],
                 'clientID',
@@ -70,10 +81,10 @@ class SignJsConnectTest extends \PHPUnit_Framework_TestCase {
                 false,
                 '71528bfbb99aba97734f79beab6d1eca1416e05a0587e9ab55b99095753f74b6',
             ],
-            'trueAsHashType' => [
+            'trueAsHashType'    => [
                 [
-                    'Name' => 'John PHP',
-                    'eMail' => 'john.php@example.com',
+                    'Name'      => 'John PHP',
+                    'eMail'     => 'john.php@example.com',
                     'unique_id' => '123',
                 ],
                 'clientID',
@@ -82,11 +93,11 @@ class SignJsConnectTest extends \PHPUnit_Framework_TestCase {
                 false,
                 'f1639a1838bd904cb967423be0567802',
             ],
-            'extraInfo' => [
+            'extraInfo'         => [
                 [
-                    'unique_id' => '123',
-                    'email' => 'john.php@example.com',
-                    'name' => 'John PHP',
+                    'unique_id'    => '123',
+                    'email'        => 'john.php@example.com',
+                    'name'         => 'John PHP',
                     'custom_field' => 'custom',
                 ],
                 'clientID',
@@ -97,8 +108,8 @@ class SignJsConnectTest extends \PHPUnit_Framework_TestCase {
             ],
             'defaultReturnData' => [
                 [
-                    'name' => 'John PHP',
-                    'email' => 'john.php@example.com',
+                    'name'      => 'John PHP',
+                    'email'     => 'john.php@example.com',
                     'unique_id' => '123',
                 ],
                 'clientID',
@@ -106,12 +117,12 @@ class SignJsConnectTest extends \PHPUnit_Framework_TestCase {
                 'sha256',
                 true,
                 [
-                    'name' => 'John PHP',
-                    'email' => 'john.php@example.com',
+                    'name'      => 'John PHP',
+                    'email'     => 'john.php@example.com',
                     'unique_id' => '123',
                     'client_id' => 'clientID',
-                    'sig' => '71528bfbb99aba97734f79beab6d1eca1416e05a0587e9ab55b99095753f74b6',
-                ]
+                    'sig'       => '71528bfbb99aba97734f79beab6d1eca1416e05a0587e9ab55b99095753f74b6',
+                ],
             ],
         ];
     }

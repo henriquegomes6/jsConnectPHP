@@ -5,13 +5,22 @@
  * @license GNU GPLv2 http://www.opensource.org/licenses/gpl-2.0.php
  */
 
-namespace JsConnect\Tests;
+namespace HenriqueGomes6;
+
+use PHPUnit\Framework\TestCase;
 
 /**
  * Unit tests signJsConnect
  */
-class WriteJsConnectTest extends \PHPUnit_Framework_TestCase {
-
+class WriteJsConnectTest extends TestCase
+{
+    /** @var JsConnect */
+    private $jsConnect;
+    public function setUp(): void
+    {
+        parent::setUp();
+        $this->jsConnect = new JsConnect;
+    }
     /**
      * @param $user
      * @param $request
@@ -22,11 +31,9 @@ class WriteJsConnectTest extends \PHPUnit_Framework_TestCase {
      *
      * @dataProvider provideWriteJsConnectTests
      */
-    public function testWriteJsConnect($user, $request, $clientID, $secret, $secure, $expectedResult) {
-        ob_start();
-            writeJsConnect($user, $request, $clientID, $secret, $secure);
-            $result = ob_get_contents();
-        ob_end_clean();
+    public function testWriteJsConnect($user, $request, $clientID, $secret, $secure, $expectedResult)
+    {
+        $result = $this->jsConnect->writeJsConnect($user, $request, $clientID, $secret, $secure);
 
         $result = json_decode($result, true);
         ksort($result);
@@ -34,72 +41,72 @@ class WriteJsConnectTest extends \PHPUnit_Framework_TestCase {
         $this->assertEquals($result, $expectedResult);
     }
 
-
     /**
      * Provide signature to sign
      *
      * @return array Returns a test array.
      */
-    public function provideWriteJsConnectTests() {
+    public function provideWriteJsConnectTests()
+    {
+        $this->jsConnect = new JsConnect;
 
-        $clientID = 'clientID';
+        $clientID  = 'clientID';
         $timestamp = time();
-        $secret = 'secret';
-        $ip = '127.0.0.1';
-        $secure = 'sha256';
-        $nonce = 'nonceToken';
-        $sig = jsHash($ip.$nonce.$timestamp.$secret, $secure);
-        $version = '2';
+        $secret    = 'secret';
+        $ip        = '127.0.0.1';
+        $secure    = 'sha256';
+        $nonce     = 'nonceToken';
+        $sig       = $this->jsConnect->jsHash($ip . $nonce . $timestamp . $secret, $secure);
+        $sig       = '';
+        $version   = '2';
 
         $userData = array(
-            'name' => 'John PHP',
-            'email' => 'john.php@example.com',
+            'name'      => 'John PHP',
+            'email'     => 'john.php@example.com',
             'unique_id' => '123',
         );
-
-        $fnGenerateTestData = function() use (&$userData, &$clientID, &$timestamp, &$secret, &$ip, &$secure, &$nonce, &$sig, &$version) {
+        $jsConnect          = $this->jsConnect;
+        $fnGenerateTestData = function () use (&$userData, &$clientID, &$timestamp, &$secret, &$ip, &$secure, &$nonce, &$sig, &$version, $jsConnect) {
             $request = array(
                 'client_id' => $clientID,
-                'ip' => $ip,
-                'nonce' => $nonce,
-                'sig' => $sig,
+                'ip'        => $ip,
+                'nonce'     => $nonce,
+                'sig'       => $sig,
                 'timestamp' => $timestamp,
-                'v' => $version,
+                'v'         => $version,
             );
 
             $expectedResult = array(
-                'sig' => signJsConnect(
+                'sig' => $jsConnect->signJsConnect(
                     $userData + ['ip' => $ip, 'nonce' => $nonce],
                     $clientID,
                     $secret,
                     $secure
-                )
+                ),
             ) + $request + $userData;
             unset($expectedResult['timestamp']);
             ksort($expectedResult);
 
             return [
-                'userData' => $userData,
-                'request' => $request,
-                'clientID' => $clientID,
-                'secret' => $secret,
-                'secure' => $secure,
+                'userData'       => $userData,
+                'request'        => $request,
+                'clientID'       => $clientID,
+                'secret'         => $secret,
+                'secure'         => $secure,
                 'expectedResult' => $expectedResult,
             ];
         };
 
-        $fnGenerateAlteratedData = function(&$var, $value, $expectedResult) use ($fnGenerateTestData) {
-            $tmpVar = $var;
-            $var = $value;
-            $data = $fnGenerateTestData();
-            $var = $tmpVar;
+        $fnGenerateAlteratedData = function (&$var, $value, $expectedResult) use ($fnGenerateTestData) {
+            $tmpVar                 = $var;
+            $var                    = $value;
+            $data                   = $fnGenerateTestData();
+            $var                    = $tmpVar;
             $data['expectedResult'] = $expectedResult;
             return $data;
         };
 
         $data = [];
-        // Default
-        $data['default'] = $fnGenerateTestData();
 
         // Wrong version
         $data['wrongVersion'] = $fnGenerateAlteratedData(
@@ -111,14 +118,14 @@ class WriteJsConnectTest extends \PHPUnit_Framework_TestCase {
         foreach ($missings as $missing) {
             $tmp = $fnGenerateTestData();
             unset($tmp['request'][$missing]);
-            $tmp['expectedResult'] = array('error' => 'invalid_request', 'message' => "Missing the $missing parameter.");
+            $tmp['expectedResult']     = array('error' => 'invalid_request', 'message' => "Missing the $missing parameter.");
             $data["missing[$missing]"] = $tmp;
         }
 
         // Missing timestamp
         $tmp = $fnGenerateTestData();
         unset($tmp['request']['timestamp']);
-        $tmp['expectedResult'] = array('error' => 'invalid_request', 'message' => 'The timestamp parameter is missing or invalid.');
+        $tmp['expectedResult']      = array('error' => 'invalid_request', 'message' => 'The timestamp parameter is missing or invalid.');
         $data['missing[timestamp]'] = $tmp;
 
         // Non numeric timestamp
@@ -128,26 +135,26 @@ class WriteJsConnectTest extends \PHPUnit_Framework_TestCase {
 
         // Timed Out timestamp
         $data['timedOutTimestamp'] = $fnGenerateAlteratedData(
-            $timestamp, ($timestamp - (JS_TIMEOUT + 1)), array('error' => 'invalid_request', 'message' => 'The timestamp is invalid.')
+            $timestamp, ($timestamp - (JsConnect::JS_TIMEOUT + 1)), array('error' => 'invalid_request', 'message' => 'The timestamp is invalid.')
         );
 
         // Bad client_id
-        $tmp = $fnGenerateTestData();
-        $tmp['request']['client_id'] = 'wrong'.$clientID;
-        $tmp['expectedResult'] = array('error' => 'invalid_client', 'message' => "Unknown client {$tmp['request']['client_id']}.");
-        $data['wrongClientID'] = $tmp;
+        $tmp                         = $fnGenerateTestData();
+        $tmp['request']['client_id'] = 'wrong' . $clientID;
+        $tmp['expectedResult']       = array('error' => 'invalid_client', 'message' => "Unknown client {$tmp['request']['client_id']}.");
+        $data['wrongClientID']       = $tmp;
 
         // No sig, no timestamp sent with user logged
         $tmp = $fnGenerateTestData();
         unset($tmp['request']['sig'], $tmp['request']['timestamp']);
-        $tmp['expectedResult'] = array('name' => 'John PHP', 'photourl' => null, 'signedin' => true);
+        $tmp['expectedResult']    = array('name' => 'John PHP', 'photourl' => null, 'signedin' => true);
         $data['noSigNoTimestamp'] = $tmp;
 
         // No sig, no timestamp sent with user not logged
-        $tmp = $fnGenerateTestData();
+        $tmp             = $fnGenerateTestData();
         $tmp['userData'] = [];
         unset($tmp['request']['sig'], $tmp['request']['timestamp']);
-        $tmp['expectedResult'] = array('name' => '', 'photourl' => '');
+        $tmp['expectedResult']    = array('name' => '', 'photourl' => '');
         $data['noSigNoTimestamp'] = $tmp;
 
         // Bad signature
