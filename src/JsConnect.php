@@ -6,7 +6,7 @@ class JsConnect
     const JS_CONNECT_VERSION = '2';
     const JS_TIMEOUT         = 1440;
 
-    private $header = 'Content-Type: application/json; charset=utf-8';
+    private $header = 'application/json; charset=utf-8';
 
     public function writeJsConnect($user, $request, $clientID, $secret, $secure = true)
     {
@@ -67,7 +67,7 @@ class JsConnect
         $json = json_encode($result);
 
         if (isset($request['callback'])) {
-            $this->header = 'Content-Type: application/javascript; charset=utf-8';
+            $this->header = 'application/javascript; charset=utf-8';
             return "{$request['callback']}($json)";
         }
         return $json;
