@@ -6,9 +6,20 @@ class JsConnect
     const JS_CONNECT_VERSION = '2';
     const JS_TIMEOUT         = 1440;
 
-    private $header = 'application/json; charset=utf-8';
+    private $header;
+    private $clientId;
+    private $secret;
 
-    public function writeJsConnect($user, $request, $clientID, $secret, $secure = true)
+    public function __construct(
+        string $clientId,
+        string $secret
+    ) {
+        $this->clientId = $clientId;
+        $this->secret   = $secret;
+        $this->header   = 'application/json; charset=utf-8';
+    }
+
+    public function writeJsConnect($user, $request, $secure = true)
     {
         $user = array_change_key_case($user);
 
@@ -21,7 +32,7 @@ class JsConnect
                 $error = array('error' => 'invalid_request', 'message' => "Unsupported version {$request['v']}.");
             } elseif (!isset($request['client_id'])) {
                 $error = ['error' => 'invalid_request', 'message' => 'Missing the client_id parameter.'];
-            } elseif ($request['client_id'] != $clientID) {
+            } elseif ($request['client_id'] != $this->clientId) {
                 $error = ['error' => 'invalid_client', 'message' => "Unknown client {$request['client_id']}."];
             } elseif (!isset($request['timestamp']) && !isset($request['sig'])) {
                 if (is_array($user) && count($user) > 0) {
@@ -42,7 +53,7 @@ class JsConnect
             } elseif (!isset($request['ip'])) {
                 $error = ['error' => 'invalid_request', 'message' => 'Missing the ip parameter.'];
             } else {
-                $signature = $this->jsHash($request['ip'] . $request['nonce'] . $request['timestamp'] . $secret, $secure);
+                $signature = $this->jsHash($request['ip'] . $request['nonce'] . $request['timestamp'] . $this->secret, $secure);
                 if ($signature != $request['sig']) {
                     $error = ['error' => 'access_denied', 'message' => 'Signature invalid.'];
                 }
@@ -57,7 +68,7 @@ class JsConnect
             } else {
                 $user['ip']    = $request['ip'];
                 $user['nonce'] = $request['nonce'];
-                $result        = $this->signJsConnect($user, $clientID, $secret, $secure, true);
+                $result        = $this->signJsConnect($user, $secure, true);
                 $result['v']   = self::JS_CONNECT_VERSION;
             }
         } else {
@@ -82,13 +93,11 @@ class JsConnect
      *
      *
      * @param $data
-     * @param $clientID
-     * @param $secret
      * @param $hashType
      * @param bool $returnData
      * @return array|string
      */
-    public function signJsConnect($data, $clientID, $secret, $hashType, $returnData = false)
+    public function signJsConnect($data, $hashType, $returnData = false)
     {
         $normalizedData = array_change_key_case($data);
         ksort($normalizedData);
@@ -101,9 +110,9 @@ class JsConnect
 
         // RFC1738 state that spaces are encoded as '+'.
         $stringifiedData = http_build_query($normalizedData, null, '&', PHP_QUERY_RFC1738);
-        $signature       = $this->jsHash($stringifiedData . $secret, $hashType);
+        $signature       = $this->jsHash($stringifiedData . $this->secret, $hashType);
         if ($returnData) {
-            $normalizedData['client_id'] = $clientID;
+            $normalizedData['client_id'] = $this->clientId;
             $normalizedData['sig']       = $signature;
             return $normalizedData;
         } else {
@@ -150,19 +159,17 @@ class JsConnect
      * Generate an SSO string suitable for passing in the url for embedded SSO.
      *
      * @param array $user The user to sso.
-     * @param string $clientID Your client ID.
-     * @param string $secret Your secret.
      * @return string
      */
-    public function jsSSOString($user, $clientID, $secret)
+    public function jsSSOString($user)
     {
         if (!isset($user['client_id'])) {
-            $user['client_id'] = $clientID;
+            $user['client_id'] = $this->clientId;
         }
 
         $string    = base64_encode(json_encode($user));
         $timestamp = time();
-        $hash      = hash_hmac('sha1', "$string $timestamp", $secret);
+        $hash      = hash_hmac('sha1', "$string $timestamp", $this->secret);
 
         $result = "$string $hash $timestamp hmacsha1";
         return $result;
